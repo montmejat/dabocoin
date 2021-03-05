@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 sha2 = "0.9.3"
+rsa = "0.3.0"
+rand = "0.7.3"

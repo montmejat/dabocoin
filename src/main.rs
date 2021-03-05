@@ -1,3 +1,6 @@
+mod blockchain;
+use blockchain::wallet::Wallet;
+
 fn main() {
-    println!("Hello, world!");
+    // let aureliens_wallet = Wallet::new();
 }

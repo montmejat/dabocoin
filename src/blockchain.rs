@@ -1,73 +1,100 @@
-pub struct Transaction {
-    pub amount: u32,
-    pub payer: String,
-    pub payee: String,
+pub mod transaction {
+    use rsa::RSAPublicKey;
+    use rsa::PublicKeyParts;
+
+    pub struct Transaction {
+        pub amount: u32,
+        pub payer: RSAPublicKey,
+        pub payee: RSAPublicKey,
+    }
+
+    impl Transaction {
+        fn to_string(&self) -> String {
+            self.amount.to_string() + &self.payer.n().to_str_radix(16) + &self.payee.n().to_str_radix(16)
+        }
+    }
 }
 
 pub mod block {
+    use super::transaction::Transaction;
+    use sha2::Digest;
     use sha2::Sha256;
 
     pub struct Block {
-        pub id: String,
         pub previous_hash: String,
         pub transaction: Transaction,
         pub time_stamp: String,
     }
 
     impl Block {
-        fn get_hash(&self) -> u8 {
+        pub fn new(previous_hash: String, transaction: Transaction, time_stamp: String) -> Block {
+            Block {
+                previous_hash: previous_hash,
+                transaction: transaction,
+                time_stamp: time_stamp,
+            }
+        }
+
+        fn get_hash(&self) -> &[u8] {
             let mut hasher = Sha256::new();
-            hasher.update(block.id.as_bytes();
-            hasher.finalize()[..];
+            let value = &self.transaction.amount.to_string();
+            hasher.update(value.as_bytes());
+            &hasher.finalize()[..]
         }
     }
 }
 
 pub mod chain {
+    use super::transaction::Transaction;
+    use super::block::Block;
+
     struct Chain {
-        chain: [Block],
+        chain: vec![Block],
     }
 
     impl Chain {
-        fn get_last_block(&self) -> Block {
+        fn get_last_block(&self) -> &Block {
             &self.chain[&self.chain.len() - 1]
         }
 
         fn add_block(&self, transaction: Transaction, sender_public_key: String, signature: String) {
-            let block = Block {
-                id: "todo: generate id"
-                previous_hash: chain.get_last_block()
-                transaction: transaction,
-                time_stamp: "todo: get current date"
-            }
-            
+            let block = Block::new(String::from("todo"), transaction, String::from("todo"));
             &self.chain.push(block);
         }
     }
 }
 
 pub mod wallet {
-    use rsa::{PublicKey, RSAPrivateKey, PaddingScheme};
+    use rsa::{PublicKey, RSAPrivateKey, RSAPublicKey, PaddingScheme};
     use rand::rngs::OsRng;
-
+    
     pub struct Wallet {
-        pub public_key: String,
-        pub private_key: String,
+        pub public_key: RSAPublicKey,
+        pub private_key: RSAPrivateKey,
     }
 
     impl Wallet {
         fn new() -> Wallet {
             let mut rng = OsRng;
             let bits = 2048;
+            let private_key = RSAPrivateKey::new(&mut OsRng, bits).expect("failed to generate a key");
 
             Wallet {
-                public_key: RSAPublicKey::from(&priv_key),
-                private_key: RSAPrivateKey::new(&mut rng, bits).expect("failed to generate a key"),
+                public_key: RSAPublicKey::from(&private_key),
+                private_key: private_key,
             }
         }
 
-        pub fn send_money() {
-            // todo
-        }
+        // pub fn send_money(&self, amount: f32, payee_public_key: String) -> Block {
+        //     let transaction = Transaction {
+        //         amount: amount,
+        //         payer: &self.public_key,
+        //         payee: payee_public_key,
+        //     }
+
+        //     let data = b"hello world";
+        //     let enc_data = pub_key.encrypt(&mut rng, PaddingScheme::new_pkcs1v15(), &data[..]).expect("failed to encrypt");
+            
+        // }
     }
 }
