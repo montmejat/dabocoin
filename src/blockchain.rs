@@ -3,13 +3,13 @@ pub mod transaction {
     use rsa::PublicKeyParts;
 
     pub struct Transaction {
-        pub amount: u32,
+        pub amount: f32,
         pub payer: RSAPublicKey,
         pub payee: RSAPublicKey,
     }
 
     impl Transaction {
-        fn to_string(&self) -> String {
+        pub fn to_string(&self) -> String {
             self.amount.to_string() + &self.payer.n().to_str_radix(16) + &self.payee.n().to_str_radix(16)
         }
     }
@@ -47,8 +47,9 @@ pub mod block {
 pub mod chain {
     use super::transaction::Transaction;
     use super::block::Block;
+    use rsa::RSAPublicKey;
 
-    struct Chain {
+    pub struct Chain {
         chain: vec![Block],
     }
 
@@ -57,7 +58,9 @@ pub mod chain {
             &self.chain[&self.chain.len() - 1]
         }
 
-        fn add_block(&self, transaction: Transaction, sender_public_key: String, signature: String) {
+        pub fn add_block(&self, transaction: Transaction, sender_public_key: RSAPublicKey, signature: Vec<u8>) {
+            
+
             let block = Block::new(String::from("todo"), transaction, String::from("todo"));
             &self.chain.push(block);
         }
@@ -65,17 +68,18 @@ pub mod chain {
 }
 
 pub mod wallet {
+    use super::transaction::Transaction;
+    use super::chain::Chain;
     use rsa::{PublicKey, RSAPrivateKey, RSAPublicKey, PaddingScheme};
     use rand::rngs::OsRng;
-    
+
     pub struct Wallet {
         pub public_key: RSAPublicKey,
         pub private_key: RSAPrivateKey,
     }
 
     impl Wallet {
-        fn new() -> Wallet {
-            let mut rng = OsRng;
+        pub fn new() -> Wallet {
             let bits = 2048;
             let private_key = RSAPrivateKey::new(&mut OsRng, bits).expect("failed to generate a key");
 
@@ -85,16 +89,18 @@ pub mod wallet {
             }
         }
 
-        // pub fn send_money(&self, amount: f32, payee_public_key: String) -> Block {
-        //     let transaction = Transaction {
-        //         amount: amount,
-        //         payer: &self.public_key,
-        //         payee: payee_public_key,
-        //     }
+        pub fn send_money(&self, chain: Chain, amount: f32, payee_public_key: RSAPublicKey) {
+            let transaction = Transaction {
+                amount: amount,
+                payer: self.public_key,
+                payee: payee_public_key,
+            };
 
-        //     let data = b"hello world";
-        //     let enc_data = pub_key.encrypt(&mut rng, PaddingScheme::new_pkcs1v15(), &data[..]).expect("failed to encrypt");
+            let padding = PaddingScheme::new_pkcs1v15_encrypt();
+            let data = transaction.to_string().as_bytes();
+            let signature = self.private_key.encrypt(&mut OsRng, padding, &data[..]).expect("failed to encrypt");
             
-        // }
+            chain.add_block(transaction, self.public_key, signature);
+        }
     }
 }
