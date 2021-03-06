@@ -10,7 +10,7 @@ pub mod transaction {
 
     impl Transaction {
         pub fn to_string(&self) -> String {
-            self.amount.to_string() + &self.payer.n().to_str_radix(16) + &self.payee.n().to_str_radix(16)
+            String::from(self.amount.to_string() + &self.payer.n().to_str_radix(16) + &self.payee.n().to_str_radix(16))
         }
     }
 }
@@ -35,34 +35,46 @@ pub mod block {
             }
         }
 
-        fn get_hash(&self) -> &[u8] {
-            let mut hasher = Sha256::new();
-            let value = &self.transaction.amount.to_string();
-            hasher.update(value.as_bytes());
-            &hasher.finalize()[..]
-        }
+        // fn get_hash(&self) -> &[u8] {
+        //     let mut hasher = Sha256::new();
+        //     let value = &self.transaction.amount.to_string();
+        //     hasher.update(value.as_bytes());
+        //     &hasher.finalize()[..]
+        // }
     }
 }
 
 pub mod chain {
     use super::transaction::Transaction;
     use super::block::Block;
-    use rsa::RSAPublicKey;
+    use rsa::{RSAPublicKey, PublicKey, PaddingScheme};
+    use std::collections::LinkedList;
 
     pub struct Chain {
-        chain: vec![Block],
+        chain: LinkedList<Block>,
     }
 
     impl Chain {
-        fn get_last_block(&self) -> &Block {
-            &self.chain[&self.chain.len() - 1]
+        pub fn new() -> Chain {
+            let chain: LinkedList<Block> = LinkedList::new();
+            Chain {
+                chain: chain,
+            }
         }
 
-        pub fn add_block(&self, transaction: Transaction, sender_public_key: RSAPublicKey, signature: Vec<u8>) {
-            
+        fn get_last_block(&self) -> Option<&Block> {
+            self.chain.back()
+        }
 
-            let block = Block::new(String::from("todo"), transaction, String::from("todo"));
-            &self.chain.push(block);
+        pub fn add_block(&mut self, transaction: Transaction, sender_public_key: &RSAPublicKey, signature: Vec<u8>) {
+            let padding = PaddingScheme::new_pkcs1v15_encrypt();
+            match sender_public_key.verify(padding, transaction.to_string().as_bytes(), &signature) {
+                Ok(_) => {
+                    let block = Block::new(String::from("todo"), transaction, String::from("todo"));
+                    self.chain.push_back(block);
+                },
+                Err(_) => print!("Could not add the block the chain."),
+            }
         }
     }
 }
@@ -89,18 +101,19 @@ pub mod wallet {
             }
         }
 
-        pub fn send_money(&self, chain: Chain, amount: f32, payee_public_key: RSAPublicKey) {
+        pub fn send_money(& self, chain: &mut Chain, amount: f32, payee_public_key: RSAPublicKey) {
             let transaction = Transaction {
                 amount: amount,
-                payer: self.public_key,
+                payer: self.public_key.clone(),
                 payee: payee_public_key,
             };
 
             let padding = PaddingScheme::new_pkcs1v15_encrypt();
-            let data = transaction.to_string().as_bytes();
+            let a = transaction.to_string();
+            let data = a.as_bytes();
             let signature = self.private_key.encrypt(&mut OsRng, padding, &data[..]).expect("failed to encrypt");
             
-            chain.add_block(transaction, self.public_key, signature);
+            chain.add_block(transaction, &self.public_key, signature);
         }
     }
 }
