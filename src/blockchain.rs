@@ -17,8 +17,6 @@ pub mod transaction {
 
 pub mod block {
     use super::transaction::Transaction;
-    use sha2::Digest;
-    use sha2::Sha256;
 
     pub struct Block {
         pub previous_hash: String,
@@ -35,12 +33,9 @@ pub mod block {
             }
         }
 
-        // fn get_hash(&self) -> &[u8] {
-        //     let mut hasher = Sha256::new();
-        //     let value = &self.transaction.amount.to_string();
-        //     hasher.update(value.as_bytes());
-        //     &hasher.finalize()[..]
-        // }
+        pub fn hash(&self) -> String {
+            String::from(self.transaction.to_string())
+        }
     }
 }
 
@@ -70,8 +65,13 @@ pub mod chain {
             let padding = PaddingScheme::new_pkcs1v15_encrypt();
             match sender_public_key.verify(padding, transaction.to_string().as_bytes(), &signature) {
                 Ok(_) => {
-                    let block = Block::new(String::from("todo"), transaction, String::from("todo"));
-                    self.chain.push_back(block);
+                    match self.get_last_block() {
+                        Some(last_block) => {
+                            let block = Block::new(last_block.hash(), transaction, String::from("todo"));
+                            self.chain.push_back(block);
+                        },
+                        None => {},
+                    }
                 },
                 Err(_) => print!("Could not add the block the chain."),
             }
@@ -82,7 +82,7 @@ pub mod chain {
 pub mod wallet {
     use super::transaction::Transaction;
     use super::chain::Chain;
-    use rsa::{PublicKey, RSAPrivateKey, RSAPublicKey, PaddingScheme};
+    use rsa::{RSAPrivateKey, RSAPublicKey, PaddingScheme};
     use rand::rngs::OsRng;
 
     pub struct Wallet {
@@ -92,8 +92,10 @@ pub mod wallet {
 
     impl Wallet {
         pub fn new() -> Wallet {
-            let bits = 2048;
+            println!("Generating key...");
+            let bits = 12_300;
             let private_key = RSAPrivateKey::new(&mut OsRng, bits).expect("failed to generate a key");
+            println!("Done");
 
             Wallet {
                 public_key: RSAPublicKey::from(&private_key),
@@ -108,10 +110,11 @@ pub mod wallet {
                 payee: payee_public_key,
             };
 
-            let padding = PaddingScheme::new_pkcs1v15_encrypt();
-            let a = transaction.to_string();
-            let data = a.as_bytes();
-            let signature = self.private_key.encrypt(&mut OsRng, padding, &data[..]).expect("failed to encrypt");
+            let padding = PaddingScheme::new_pkcs1v15_sign(None);
+            let transaction_as_string = transaction.to_string();
+            let data = transaction_as_string.as_bytes();
+            println!("Signing...");
+            let signature = self.private_key.sign(padding, &data[..]).expect("failed to encrypt");
             
             chain.add_block(transaction, &self.public_key, signature);
         }
